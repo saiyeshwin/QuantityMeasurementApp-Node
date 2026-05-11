@@ -10,4 +10,10 @@ router.post("/multiply", protect, validate(operationSchema), operationController
 router.post("/divide", protect, validate(operationSchema), operationController.divide);
 router.post("/compare", protect, validate(operationSchema), operationController.compare);
 router.post("/convert", protect, validate(operationSchema), operationController.convert);
+router.post("/add-with-target-unit", protect, validate(operationSchema), operationController.addWithTargetUnit);
+router.post("/subtract-with-target-unit", protect, validate(operationSchema), operationController.subtractWithTargetUnit);
+router.get("/history/type/:type", protect, operationController.getHistoryByType);
+router.get("/history/operation/:operation", protect, operationController.getHistoryByOperation);
+router.get("/history/errored", protect, operationController.getErroredHistory);
+router.get("/count/:operation", protect, operationController.getOperationCount);
 module.exports = router;

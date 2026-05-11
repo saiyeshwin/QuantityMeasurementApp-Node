@@ -1,10 +1,10 @@
-const History = require("../models/history"); // Fixed case-sensitivity
+const History = require("../models/history");
 const { UNIT_TYPES } = require("../utils/constants");
 const lengthConverter = require("../utils/conversions/length");
 const temperatureConverter = require("../utils/conversions/temperature");
 const weightConverter = require("../utils/conversions/weight");
 const volumeConverter = require("../utils/conversions/volume");
-
+const { Op } = require("sequelize");
 const validateUnits = (unit1, unit2) => {
   const type1 = UNIT_TYPES[unit1];
   const type2 = UNIT_TYPES[unit2];
@@ -189,6 +189,55 @@ const convert = async (data) => {
   });
   return result;
 };
+const addWithTargetUnit = async (data) => {
+  const { value1, unit1, value2, unit2, targetUnit } = data;
+  const type = validateUnits(unit1, unit2);
+  validateUnits(unit1, targetUnit); 
+  const base1 = convertToBase(value1, unit1, type);
+  const base2 = convertToBase(value2, unit2, type);
+  const sumBase = base1 + base2;
+  const result = type === "TEMPERATURE" 
+    ? temperatureConverter.fromKelvin(sumBase, targetUnit)
+    : sumBase / (type === "LENGTH" ? lengthMap[targetUnit] : weightMap[targetUnit] || volumeMap[targetUnit]);
+  await History.create({
+    operation: "ADD_WITH_TARGET",
+    measurementType: type,
+    input1: `${value1} ${unit1}`,
+    input2: `${value2} ${unit2}`,
+    result: `${result} ${targetUnit}`,
+    status: "SUCCESS",
+  });
+  return result;
+};
+
+const subtractWithTargetUnit = async (data) => {
+  const { value1, unit1, value2, unit2, targetUnit } = data;
+  const type = validateUnits(unit1, unit2);
+  validateUnits(unit1, targetUnit);
+
+  const base1 = convertToBase(value1, unit1, type);
+  const base2 = convertToBase(value2, unit2, type);
+  const diffBase = base1 - base2;
+
+  const result = type === "TEMPERATURE" 
+    ? temperatureConverter.fromKelvin(diffBase, targetUnit)
+    : diffBase / (type === "LENGTH" ? lengthMap[targetUnit] : weightMap[targetUnit] || volumeMap[targetUnit]);
+
+  await History.create({
+    operation: "SUBTRACT_WITH_TARGET",
+    measurementType: type,
+    input1: `${value1} ${unit1}`,
+    input2: `${value2} ${unit2}`,
+    result: `${result} ${targetUnit}`,
+    status: "SUCCESS",
+  });
+  return result;
+};
+
+const getHistoryByType = (type) => History.findAll({ where: { measurementType: type.toUpperCase() } });
+const getHistoryByOperation = (operation) => History.findAll({ where: { operation: operation.toUpperCase() } });
+const getErroredHistory = () => History.findAll({ where: { status: "FAILED" } });
+const getOperationCount = (operation) => History.count({ where: { operation: operation.toUpperCase() } });
 module.exports = {
   add,
   subtract,
@@ -196,4 +245,10 @@ module.exports = {
   divide,
   compare,
   convert,
+  addWithTargetUnit,
+  subtractWithTargetUnit,
+  getHistoryByType,
+  getHistoryByOperation,
+  getErroredHistory,
+  getOperationCount,
 };

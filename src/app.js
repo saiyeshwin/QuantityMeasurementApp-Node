@@ -1,0 +1,12 @@
+const express = require("express");
+const logger = require("./middleware/loggerMiddleware");
+const errorHandler = require("./middleware/errorMiddleware");
+const authRoutes = require("./routes/authRoutes");
+const operationRoutes = require("./routes/operationRoutes");
+const app = express();
+app.use(express.json());
+app.use(logger);
+app.use("/auth", authRoutes);
+app.use("/api", operationRoutes);
+app.use(errorHandler);
+module.exports = app;

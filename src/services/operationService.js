@@ -1,7 +1,10 @@
-const History = require("../models/History");
+const History = require("../models/history"); // Fixed case-sensitivity
 const { UNIT_TYPES } = require("../utils/constants");
 const lengthConverter = require("../utils/conversions/length");
 const temperatureConverter = require("../utils/conversions/temperature");
+const weightConverter = require("../utils/conversions/weight");
+const volumeConverter = require("../utils/conversions/volume");
+
 const validateUnits = (unit1, unit2) => {
   const type1 = UNIT_TYPES[unit1];
   const type2 = UNIT_TYPES[unit2];
@@ -20,6 +23,10 @@ const convertToBase = (value, unit, type) => {
       return lengthConverter.toBase(value, unit);
     case "TEMPERATURE":
       return temperatureConverter.toKelvin(value, unit);
+    case "WEIGHT":
+      return weightConverter.toBase(value, unit);
+    case "VOLUME":
+      return volumeConverter.toBase(value, unit);
     default:
       return value;
   }
@@ -140,40 +147,38 @@ const compare = async (data) => {
   return result;
 };
 const convert = async (data) => {
-  const {
-    value1,
-    unit1,
-    targetUnit,
-  } = data;
+  const { value1, unit1, targetUnit } = data;
   const type1 = UNIT_TYPES[unit1];
   const type2 = UNIT_TYPES[targetUnit];
+  
   if (type1 !== type2) {
     throw new Error("Incompatible conversion");
   }
+
   let baseValue;
   let result;
+  
   switch (type1) {
     case "LENGTH":
       baseValue = lengthConverter.toBase(value1, unit1);
-      result = lengthConverter.fromBase(
-        baseValue,
-        targetUnit
-      );
+      result = lengthConverter.fromBase(baseValue, targetUnit);
       break;
-
     case "TEMPERATURE":
-      baseValue = temperatureConverter.toKelvin(
-        value1,
-        unit1
-      );
-      result = temperatureConverter.fromKelvin(
-        baseValue,
-        targetUnit
-      );
+      baseValue = temperatureConverter.toKelvin(value1, unit1);
+      result = temperatureConverter.fromKelvin(baseValue, targetUnit);
+      break;
+    case "WEIGHT":
+      baseValue = weightConverter.toBase(value1, unit1);
+      result = weightConverter.fromBase(baseValue, targetUnit);
+      break;
+    case "VOLUME":
+      baseValue = volumeConverter.toBase(value1, unit1);
+      result = volumeConverter.fromBase(baseValue, targetUnit);
       break;
     default:
       result = value1;
   }
+
   await History.create({
     operation: "CONVERT",
     measurementType: type1,
